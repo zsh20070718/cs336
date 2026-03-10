@@ -49,19 +49,110 @@ def find_chunk_boundaries(
     return sorted(set(chunk_boundaries))
 
 
-cwd = os.getcwd()
+# Dynamically locate the script's own directory so the data path is correct no matter where it's run from
+cwd = os.path.dirname(os.path.join(os.path.abspath(__file__), "..", "..", ".."))
 data_path = os.path.abspath(os.path.join(cwd, "data", "TinyStoriesV2-GPT4-train.txt"))
 
+def get_original_token_single(token: bytes):
+    list = []
+    for i in range(len(token)):
+        list.append(token[i])
+    return list
+
+def get_original_tokens(chunk: bytes, separator: bytes, separator_id: int):
+    chunk_len = len(chunk)
+    cutlist = []
+    i = 0
+    while i < chunk_len:
+        j = chunk.find(separator, i)
+        if j == -1:
+            cutlist.append(chunk[i:])
+            break
+        cutlist.append(chunk[i:j])
+        cutlist.append(separator)
+        i = j + len(separator)
+        
+    blist = []
+    for cutted in cutlist:
+        if cutted == separator:
+            blist.append(separator_id)
+        else:
+            blist.extend(get_original_token_single(cutted))
+
+    return blist
+
+
 with open(data_path, "rb") as f:
-    num_processes = 4
+    num_processes = 640
+    dict_size = 0
+    max_dict_size = 270
+    dict = {}
+    for i in range(256):
+        dict[i] = bytes([i])
+        dict_size += 1
+
+    separator = b"<|endoftext|>"
+    separator_id = dict_size
+    dict[dict_size] = separator
+    dict_size += 1
+    
     print("open file success")
-    boundaries = find_chunk_boundaries(f, num_processes, b"<|endoftext|>")
-    print("size is ", len(boundaries))
+    boundaries = find_chunk_boundaries(f, num_processes, separator)
+    print("boundaries done")
 
     # The following is a serial implementation, but you can parallelize this
     # by sending each start/end pair to a set of processes.
+
+    all_token_list = []
+
+    tmp_cnt = 0
     for start, end in zip(boundaries[:-1], boundaries[1:]):
         f.seek(start)
-        chunk = f.read(end - start).decode("utf-8", errors="ignore")
+        chunk = f.read(end - start)
         # Run pre-tokenization on your chunk and store the counts for each pre-token
         # print(chunk)
+
+        token_list = get_original_tokens(chunk, separator, separator_id)
+        print("here is tokenlist:")
+        # for token in token_list:
+        #     print(token)
+        all_token_list.extend(token_list)
+        tmp_cnt += 1
+        if tmp_cnt == 1:
+            break
+
+    while dict_size < max_dict_size:
+        print("dict_size", dict_size)
+        dict_pair = {}
+        for i in range(len(all_token_list) - 1):
+            pair = (all_token_list[i], all_token_list[i + 1])
+            if pair not in dict_pair:
+                dict_pair[pair] = 0
+            dict_pair[pair] += 1
+        print("insert done")
+        
+        max_pair = max(dict_pair, key=dict_pair.get)
+        max_pair_id = dict_size
+        dict[dict_size] = dict[max_pair[0]] + dict[max_pair[1]]
+        dict_size += 1
+        print("max done pair : ", max_pair)
+        
+        new_all_token_list = []
+        i = 0
+        while i < len(all_token_list) - 1:
+            if (all_token_list[i], all_token_list[i + 1]) == max_pair:
+                new_all_token_list.append(max_pair_id)
+                i += 2
+            else:
+                new_all_token_list.append(all_token_list[i])
+                i += 1
+        if i < len(all_token_list):
+            new_all_token_list.append(all_token_list[i])
+        all_token_list = new_all_token_list
+
+        print("redo done")
+
+    print("dict size: ", dict_size)
+    print("dict: ")
+    for it in dict.keys():
+        print(it, dict[it])
