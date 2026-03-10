@@ -49,12 +49,14 @@ def find_chunk_boundaries(
     return sorted(set(chunk_boundaries))
 
 
-## Usage
-data_path = "../data/TinyStoriesV2-GPT4-train.txt"
+cwd = os.getcwd()
+data_path = os.path.abspath(os.path.join(cwd, "data", "TinyStoriesV2-GPT4-train.txt"))
 
 with open(data_path, "rb") as f:
     num_processes = 4
+    print("open file success")
     boundaries = find_chunk_boundaries(f, num_processes, b"<|endoftext|>")
+    print("size is ", len(boundaries))
 
     # The following is a serial implementation, but you can parallelize this
     # by sending each start/end pair to a set of processes.
@@ -62,3 +64,4 @@ with open(data_path, "rb") as f:
         f.seek(start)
         chunk = f.read(end - start).decode("utf-8", errors="ignore")
         # Run pre-tokenization on your chunk and store the counts for each pre-token
+        # print(chunk)
