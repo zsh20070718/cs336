@@ -83,9 +83,9 @@ def get_original_tokens(chunk: bytes, separator: bytes, separator_id: int):
 
 
 with open(data_path, "rb") as f:
-    num_processes = 640
+    num_processes = 3200
     dict_size = 0
-    max_dict_size = 270
+    max_dict_size = 500
     dict = {}
     inv_dict = {}
     for i in range(256):
@@ -106,39 +106,38 @@ with open(data_path, "rb") as f:
     # The following is a serial implementation, but you can parallelize this
     # by sending each start/end pair to a set of processes.
 
-    all_b_list = []
+    tokens_list = []
 
     tmp_cnt = 0
+    tar_cnt = num_processes // 160
     for start, end in zip(boundaries[:-1], boundaries[1:]):
         f.seek(start)
         chunk = f.read(end - start)
         # Run pre-tokenization on your chunk and store the counts for each pre-token
         # print(chunk)
 
-        token_list = get_original_tokens(chunk, separator, separator_id)
-        print("here is tokenlist:")
-        all_b_list.extend(token_list)
+        tokens_list.extend(get_original_tokens(chunk, separator, separator_id))
         tmp_cnt += 1
-        if tmp_cnt == 1:
+        print("here is tokenlist:", tmp_cnt, tar_cnt)
+        if tmp_cnt == tar_cnt:
             break
     
-    tokens_list = all_b_list
-    # for i in range(len(all_b_list)):
-    #     print("i ", i, all_b_list[i], type(all_b_list[i]))
-    #     tokens_list.append(inv_dict[all_b_list[i]])
-
-    proj = {}
     N = len(tokens_list)
+    print("N", N)
+
+    proj = []
     for i in range(dict_size):
-        proj[i] = []
+        proj.append([])
     for i in range(N):
         proj[tokens_list[i]].append(i)
+    print("proj done")
 
     pre = [-1] * N
     nxt = [N] * N
     for i in range(N):
         pre[i] = i - 1
         nxt[i] = i + 1
+    print("pre nxt done")
     
     dict_pair = {}
     for i in range(N - 1):
@@ -148,16 +147,15 @@ with open(data_path, "rb") as f:
 
     while dict_size < max_dict_size:
         print("dict_size", dict_size)
-        
         max_pair = max(dict_pair, key=dict_pair.get)
+        print("max_find") 
+        
         max_pair_id = dict_size
         max_pair_cnt = dict_pair[max_pair]
         dict[dict_size] = dict[max_pair[0]] + dict[max_pair[1]]
         inv_dict[dict[dict_size]] = dict_size
         dict_size += 1
 
-        del dict_pair[max_pair]
-        print("max done pair : ", max_pair)
         occ = []
         if max_pair[0] == max_pair[1]:
             id = max_pair[0]
@@ -166,14 +164,13 @@ with open(data_path, "rb") as f:
             while i < len(proj[id]):
                 if i + 1 < len(proj[id]) and tokens_list[nxt[proj[id][i]]] == id:
                     occ.append(proj[id][i])
-                    i += 3 
+                    i += 2
                     # here is a special design(?)
                     # i hope it doesn't affect the result
                 else:
                     nproj.append(proj[id][i])
                     i += 1
             proj[id] = nproj
-            proj[max_pair_id] = occ
             
         else:
             nproj0 = []
@@ -189,24 +186,25 @@ with open(data_path, "rb") as f:
                 else:
                     nproj1.append(ps)
 
-            proj[max_pair_id] = occ
             proj[max_pair[0]] = nproj0
             proj[max_pair[1]] = nproj1
 
+        proj.append(occ)
         for p in occ:
             q = nxt[p]
             if pre[p] != -1:
                 pr = (tokens_list[pre[p]], tokens_list[p])
+                # print("line198", p, pre[p], pr, max_pair)
                 dict_pair[pr] -= 1
             if nxt[q] != N:
                 pr = (tokens_list[q], tokens_list[nxt[q]])
                 dict_pair[pr] -= 1
-        for it in occ:
-            tokens_list[it] = max_pair_id
-            nxt[it] = nxt[nxt[it]]
-            if nxt[it] != N:
-                pre[nxt[it]] = it
-        for p in occ:
+
+            nxt[p] = nxt[q]
+            if nxt[p] != N:
+                pre[nxt[p]] = p
+            tokens_list[p] = max_pair_id
+
             if pre[p] != -1:
                 pr = (tokens_list[pre[p]], tokens_list[p])
                 if pr not in dict_pair:
@@ -217,6 +215,7 @@ with open(data_path, "rb") as f:
                 if pr not in dict_pair:
                     dict_pair[pr] = 0
                 dict_pair[pr] += 1
+        del dict_pair[max_pair]
 
 
     print("dict size: ", dict_size)
