@@ -1,0 +1,18 @@
+---
+description: Python quality and testing conventions
+alwaysApply: true
+---
+
+## Quality bar
+
+- Make small, localized changes; keep functions pure where possible.
+- Prefer clear names and type hints when they add clarity.
+- Avoid narrative/obvious comments.
+
+## Testing
+
+- After edits, run the smallest relevant test(s) when possible; otherwise run `uv run pytest`.
+
+## Formatting/linting
+
+- Respect the repo's settings in `pyproject.toml` (e.g., ruff line length 120).

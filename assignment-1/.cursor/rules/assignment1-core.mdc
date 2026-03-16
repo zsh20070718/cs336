@@ -1,0 +1,19 @@
+---
+description: CS336 A1 collaboration boundaries
+alwaysApply: true
+---
+
+## CS336 Assignment 1 (Basics) working agreement
+
+- Default implementation target is `cs336_basics/`.
+- `tests/` is allowed for reading to understand expected behavior and interfaces.
+- Do not edit `tests/` unless I explicitly ask.
+
+## Project commands
+
+- Run code/tests via `uv run ...` (see `README.md`).
+- Prefer `uv run pytest` for verification.
+
+## Keep context lean
+
+- Avoid pulling `.venv/`, `data/`, caches, logs, and model checkpoints into context.

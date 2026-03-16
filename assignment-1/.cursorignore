@@ -1,0 +1,41 @@
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.hypothesis/
+
+# Data / large artifacts (downloaded per README)
+data/
+*.zip
+*.gz
+*.tar
+*.tar.gz
+*.tgz
+
+# ML / checkpoint artifacts
+*.pt
+*.pth
+*.ckpt
+*.bin
+*.safetensors
+*.onnx
+
+# Numpy artifacts
+*.npy
+*.npz
+
+# Logs / experiment outputs
+wandb/
+runs/
+logs/
+*.log
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
