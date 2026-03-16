@@ -86,14 +86,18 @@ def test_roundtrip_empty():
 
 
 def test_empty_matches_tiktoken():
+    print("in")
     reference_tokenizer = tiktoken.get_encoding("gpt2")
+    print("sdfsf")
     tokenizer = get_tokenizer_from_vocab_merges_path(
         vocab_path=VOCAB_PATH,
         merges_path=MERGES_PATH,
     )
     test_string = ""
 
+    print("here")
     reference_ids = reference_tokenizer.encode(test_string)
+    print("there")
     ids = tokenizer.encode(test_string)
     assert ids == reference_ids
 
