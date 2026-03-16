@@ -3,11 +3,17 @@ description: Python quality and testing conventions
 alwaysApply: true
 ---
 
+## Code style (match cs336_basics, e.g. linear.py)
+
+- **Signatures**: One parameter per line for multi-arg functions; trailing comma on the last parameter. Type hints on main args and return types; optional args can use `param = None` without type.
+- **Spacing**: Spaces around `=` in keyword arguments (e.g. `mean = 0.0`, `std = 2.0 / (in_features + out_features)`).
+- **Structure**: Single blank line between methods; blank line between logical blocks inside a method. No docstrings or narrative comments unless necessary.
+- **Expression style**: Prefer compact, readable expressions (e.g. `x @ self.weight.T`). Keep functions small and focused.
+
 ## Quality bar
 
 - Make small, localized changes; keep functions pure where possible.
 - Prefer clear names and type hints when they add clarity.
-- Avoid narrative/obvious comments.
 
 ## Testing
 

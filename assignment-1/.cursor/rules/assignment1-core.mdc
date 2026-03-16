@@ -3,9 +3,16 @@ description: CS336 A1 collaboration boundaries
 alwaysApply: true
 ---
 
+## Do not change code outside the current task
+
+- **Only edit what the user explicitly asked for.** Do not refactor, "improve", or touch other files or functions.
+- **Leave already-working or previously completed code unchanged** unless the user explicitly asks to change it.
+- If the user says "implement X" or "fix Y", change only the code required for X or Y. Do not rewrite unrelated parts of the file or other files.
+
 ## CS336 Assignment 1 (Basics) working agreement
 
 - Default implementation target is `cs336_basics/`.
+- Match the code style of existing files in `cs336_basics/` (e.g. `linear.py`: one param per line, spaces around `=` in kwargs, minimal comments, compact expressions).
 - `tests/` is allowed for reading to understand expected behavior and interfaces.
 - Do not edit `tests/` unless I explicitly ask.
 
