@@ -198,7 +198,19 @@ def run_multihead_self_attention_with_rope(
         Float[Tensor, " ... sequence_length d_out"]: Tensor with the output of running your optimized, batched multi-headed attention
         implementation with the given QKV projection weights and input features.
     """
-    raise NotImplementedError
+    from cs336_basics.attention import multihead_self_attention_with_rope as _multihead_self_attention_with_rope
+    return _multihead_self_attention_with_rope(
+        d_model=d_model, 
+        num_heads=num_heads, 
+        max_seq_len=max_seq_len, 
+        theta=theta, 
+        q_proj_weight=q_proj_weight, 
+        k_proj_weight=k_proj_weight, 
+        v_proj_weight=v_proj_weight, 
+        o_proj_weight=o_proj_weight, 
+        in_features=in_features, 
+        token_positions=token_positions
+    )
 
 
 def run_rope(
@@ -387,7 +399,19 @@ def run_transformer_lm(
         Float[Tensor, "batch_size sequence_length vocab_size"]: Tensor with the predicted unnormalized
         next-word distribution for each token.
     """
-    raise NotImplementedError
+    from cs336_basics.transformer import run_transformer_lm as _run_transformer_lm
+
+    return _run_transformer_lm(
+        vocab_size=vocab_size,
+        context_length=context_length,
+        d_model=d_model,
+        num_layers=num_layers,
+        num_heads=num_heads,
+        d_ff=d_ff,
+        rope_theta=rope_theta,
+        weights=weights,
+        in_indices=in_indices,
+    )
 
 
 def run_rmsnorm(

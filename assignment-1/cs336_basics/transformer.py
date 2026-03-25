@@ -127,3 +127,45 @@ def run_transformer_block(
     transformer_input = residual + ffn_out
 
     return transformer_input
+
+
+def run_transformer_lm(
+    vocab_size: int,
+    context_length: int,
+    d_model: int,
+    num_layers: int,
+    num_heads: int,
+    d_ff: int,
+    rope_theta: float,
+    weights: dict[str, Tensor],
+    in_indices: torch.Tensor,
+) -> Float[Tensor, " batch_size sequence_length vocab_size"]:
+    from cs336_basics.embedding import Embedding
+    from cs336_basics.rmsnorm import RMSNorm
+
+    token_emb_w = weights["token_embeddings.weight"]
+    embedding = Embedding(vocab_size, d_model, device=token_emb_w.device, dtype=token_emb_w.dtype)
+    embedding.load_state_dict({"weight": token_emb_w})
+    x = embedding(in_indices)
+
+    for layer_idx in range(num_layers):
+        prefix = f"layers.{layer_idx}."
+        block_weights = {k[len(prefix) :]: v for k, v in weights.items() if k.startswith(prefix)}
+        x = run_transformer_block(
+            d_model=d_model,
+            num_heads=num_heads,
+            d_ff=d_ff,
+            max_seq_len=context_length,
+            theta=rope_theta,
+            weights=block_weights,
+            in_features=x,
+        )
+
+    ln_final_w = weights["ln_final.weight"]
+    ln_final = RMSNorm(d_model, device=ln_final_w.device, dtype=ln_final_w.dtype)
+    ln_final.load_state_dict({"weight": ln_final_w})
+    x = ln_final(x)
+
+    lm_head_w = weights["lm_head.weight"]
+    logits = x @ lm_head_w.T
+    return logits
