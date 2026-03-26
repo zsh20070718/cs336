@@ -18,6 +18,7 @@ alwaysApply: true
 
 ## Project commands
 
+- **important** You cannot directly run "uv run ....", LET THE USER RUN TEST.
 - Run code/tests via `uv run ...` (see `README.md`).
 - Prefer `uv run pytest` for verification.
 

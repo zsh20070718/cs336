@@ -8,6 +8,165 @@ from jaxtyping import Float
 from torch import Tensor
 
 
+class SwiGLU(nn.Module):
+    def __init__(
+        self,
+        d_model: int,
+        d_ff: int,
+        device = None,
+        dtype = None,
+    ):
+        super().__init__()
+        from cs336_basics.linear import Linear
+
+        self.w1 = Linear(d_model, d_ff, device = device, dtype = dtype)
+        self.w2 = Linear(d_ff, d_model, device = device, dtype = dtype)
+        self.w3 = Linear(d_model, d_ff, device = device, dtype = dtype)
+
+    def forward(
+        self,
+        x: torch.Tensor,
+    ) -> torch.Tensor:
+        hidden = self.w1(x)
+        silu = hidden * torch.sigmoid(hidden)
+        return self.w2(silu * self.w3(x))
+
+
+class CausalSelfAttention(nn.Module):
+    def __init__(
+        self,
+        d_model: int,
+        num_heads: int,
+        max_seq_len: int,
+        theta: float,
+        device = None,
+        dtype = None,
+    ):
+        super().__init__()
+        from cs336_basics.linear import Linear
+        from cs336_basics.rope import RoPE
+
+        if d_model % num_heads != 0:
+            raise ValueError(f"d_model={d_model} must be divisible by num_heads={num_heads}")
+
+        self.num_heads = num_heads
+        self.head_dim = d_model // num_heads
+
+        self.q_proj = Linear(d_model, d_model, device = device, dtype = dtype)
+        self.k_proj = Linear(d_model, d_model, device = device, dtype = dtype)
+        self.v_proj = Linear(d_model, d_model, device = device, dtype = dtype)
+        self.output_proj = Linear(d_model, d_model, device = device, dtype = dtype)
+        self.rope = RoPE(self.head_dim, theta, max_seq_len, device = device)
+
+    def forward(
+        self,
+        x: torch.Tensor,
+    ) -> torch.Tensor:
+        batch_size, sequence_length, _ = x.shape
+
+        q = self.q_proj(x).view(batch_size, sequence_length, self.num_heads, self.head_dim).transpose(1, 2)
+        k = self.k_proj(x).view(batch_size, sequence_length, self.num_heads, self.head_dim).transpose(1, 2)
+        v = self.v_proj(x).view(batch_size, sequence_length, self.num_heads, self.head_dim).transpose(1, 2)
+
+        token_positions = torch.arange(sequence_length, device = x.device, dtype = torch.long)
+        q = self.rope(q, token_positions)
+        k = self.rope(k, token_positions)
+
+        scores = (q @ k.transpose(-2, -1)) / math.sqrt(self.head_dim)
+        causal_mask = torch.tril(
+            torch.ones(sequence_length, sequence_length, dtype = torch.bool, device = x.device)
+        )
+        scores = scores.masked_fill(~causal_mask, float("-inf"))
+
+        from cs336_basics.softmax import softmax
+
+        attn_weights = softmax(scores, dim = -1)
+        context = attn_weights @ v
+        context = context.transpose(1, 2).contiguous().view(batch_size, sequence_length, -1)
+        return self.output_proj(context)
+
+
+class TransformerBlock(nn.Module):
+    def __init__(
+        self,
+        d_model: int,
+        num_heads: int,
+        d_ff: int,
+        max_seq_len: int,
+        theta: float,
+        device = None,
+        dtype = None,
+    ):
+        super().__init__()
+        from cs336_basics.rmsnorm import RMSNorm
+
+        self.ln1 = RMSNorm(d_model, device = device, dtype = dtype)
+        self.attn = CausalSelfAttention(
+            d_model = d_model,
+            num_heads = num_heads,
+            max_seq_len = max_seq_len,
+            theta = theta,
+            device = device,
+            dtype = dtype,
+        )
+        self.ln2 = RMSNorm(d_model, device = device, dtype = dtype)
+        self.ffn = SwiGLU(d_model, d_ff, device = device, dtype = dtype)
+
+    def forward(
+        self,
+        x: torch.Tensor,
+    ) -> torch.Tensor:
+        x = x + self.attn(self.ln1(x))
+        x = x + self.ffn(self.ln2(x))
+        return x
+
+
+class TransformerLM(nn.Module):
+    def __init__(
+        self,
+        vocab_size: int,
+        context_length: int,
+        d_model: int,
+        num_layers: int,
+        num_heads: int,
+        d_ff: int,
+        rope_theta: float,
+        device = None,
+        dtype = None,
+    ):
+        super().__init__()
+        from cs336_basics.embedding import Embedding
+        from cs336_basics.linear import Linear
+        from cs336_basics.rmsnorm import RMSNorm
+
+        self.token_embeddings = Embedding(vocab_size, d_model, device = device, dtype = dtype)
+        self.layers = nn.ModuleList(
+            [
+                TransformerBlock(
+                    d_model = d_model,
+                    num_heads = num_heads,
+                    d_ff = d_ff,
+                    max_seq_len = context_length,
+                    theta = rope_theta,
+                    device = device,
+                    dtype = dtype,
+                )
+                for _ in range(num_layers)
+            ]
+        )
+        self.ln_final = RMSNorm(d_model, device = device, dtype = dtype)
+        self.lm_head = Linear(d_model, vocab_size, device = device, dtype = dtype)
+
+    def forward(
+        self,
+        in_indices: torch.Tensor,
+    ) -> torch.Tensor:
+        x = self.token_embeddings(in_indices)
+        for layer in self.layers:
+            x = layer(x)
+        x = self.ln_final(x)
+        return self.lm_head(x)
+
 
 def run_transformer_block(
     d_model: int,
