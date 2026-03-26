@@ -79,6 +79,7 @@ def run_train_bpe(
 
     merges = []
     while len(vocab) < vocab_size:
+        print("len(vocab)", len(vocab))
         pr = find_best_pair(text_freq)
         text_freq = merge_pair(text_freq, pr, len(vocab))
         vocab[len(vocab)] = vocab[pr[0]] + vocab[pr[1]]
