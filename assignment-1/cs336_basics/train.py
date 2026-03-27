@@ -51,6 +51,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--save_every", type = int, default = 500)
     parser.add_argument("--ckpt_path", type = str, default = "checkpoints/latest.pt")
     parser.add_argument("--resume", action = "store_true")
+    parser.add_argument("--sleep_per_step", type = float, default = 0.0)
 
     return parser.parse_args()
 
@@ -190,6 +191,9 @@ def main() -> None:
         if step % args.save_every == 0:
             save_checkpoint(model, optimizer, step, args.ckpt_path)
             print(f"[ckpt] saved step={step} path={args.ckpt_path}")
+
+        if args.sleep_per_step > 0:
+            time.sleep(args.sleep_per_step)
 
     save_checkpoint(model, optimizer, args.max_steps - 1, args.ckpt_path)
     print(f"[done] final checkpoint saved path={args.ckpt_path}")

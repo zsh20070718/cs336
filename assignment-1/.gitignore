@@ -166,7 +166,7 @@ cython_debug/
 
 
 
-
 # my stuff
 data/
 checkpoints/
+*.pt

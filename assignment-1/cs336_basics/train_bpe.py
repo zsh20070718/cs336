@@ -41,10 +41,13 @@ def run_train_bpe(
     import regex as re;
     PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
     rawtext = re.findall(PAT, data.decode("utf-8"))
+    print("rawtext done")
     rawtext = [[i for i in sp.encode("utf-8")] for sp in rawtext]
+    print("rawtext2 done")
     text_freq = {}
     for i in rawtext:
         text_freq[tuple(i)] = text_freq.get(tuple(i), 0) + 1
+    print("text_freq done")
     
     def find_best_pair(text_freq: dict[tuple[int, ...], int]) -> tuple[int, int]:
         pair_freq: dict[tuple[int, int], int] = {}
