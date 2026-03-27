@@ -170,3 +170,5 @@ cython_debug/
 data/
 checkpoints/
 *.pt
+*.txt
+tests/fixtures
