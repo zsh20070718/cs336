@@ -169,6 +169,8 @@ cython_debug/
 # my stuff
 data/
 checkpoints/
+logs/
 *.pt
 *.txt
 tests/fixtures
+tests/_snapshots
